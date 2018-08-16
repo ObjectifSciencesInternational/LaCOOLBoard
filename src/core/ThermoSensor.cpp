@@ -61,26 +61,22 @@ void ThermoSensor::config(){
     return READ_OK;
   }
 
-
- 
-void setup() {
-
-  Serial.begin(9600);
 }
- 
-void loop() {
-  float temperature;
+
+void ThermoSensor::begin() {
    
   if (getTemperature(&temperature, true) != READ_OK) {
-    Serial.println(F("Erreur de lecture du capteur"));
+    DEBUG_INFO("Erreur de lecture du capteur");
     return;
   }
 
-  Serial.print(F("Temperature : "));
+  DEBUG_VAR("Temperature : ", temperature);
+
+  /* Serial.print(("Temperature : "));
   Serial.print(temperature, 2);
   Serial.write(176);
   Serial.write('C');
-  Serial.println();
+  Serial.println();*/
 }
 
 
