@@ -1,7 +1,6 @@
 class ThermoSensor{
 
     public:
-        void config();
         void begin();
 
     private:
