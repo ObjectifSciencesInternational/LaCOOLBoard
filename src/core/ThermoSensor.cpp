@@ -2,10 +2,6 @@
 #include <Arduino.h>
 #include <ThermoSensor.h>
 
-void ThermoSensor::config(){
-
-}
-
 OneWire ds(PIN_ONEWIRE);
   
 uint8_t getTemperature(float *temperature, uint8_t reset_search) {
