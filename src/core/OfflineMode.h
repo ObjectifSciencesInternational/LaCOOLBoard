@@ -1,3 +1,5 @@
+#define OFFLINESWITCH 9
+
 class OfflineMood {
     public:
         OfflineMood();

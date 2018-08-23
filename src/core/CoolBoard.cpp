@@ -101,53 +101,56 @@ void CoolBoard::loop() {
     INFO_LOG("CoolBoard in Offline mode, does not connect");
   }
   else{
-  if (!this->isConnected()) {
-    this->coolPubSubClient->disconnect();
-    INFO_LOG("Connecting...");
-    this->connect();
-  }
-  INFO_LOG("Synchronizing RTC...");
-  bool rtcSynced = CoolTime::getInstance().sync();
-  if (!rtcSynced) {
-    this->clockProblem();
-  } else {
-    if (!SPIFFS.exists("/configSent.flag")) {
-      this->sendAllConfig();
-      File f;
-      if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
+    if (!this->isConnected()) {
+      this->coolPubSubClient->disconnect();
+      INFO_LOG("Connecting...");
+      this->connect();
+    }
+    INFO_LOG("Synchronizing RTC...");
+    bool rtcSynced = CoolTime::getInstance().sync();
+    if (!rtcSynced) {
+      this->clockProblem();
+    } 
+    else {
+      if (!SPIFFS.exists("/configSent.flag")) {
+        this->sendAllConfig();
+        File f;
+        if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
         ERROR_LOG("Can't create file configSent.flag in SPIFFS");
-      } else {
-        f.close();
+        } 
+        else {
+         f.close();
+        }
+      }
+      DynamicJsonBuffer jsonBuffer;
+      JsonObject &root = jsonBuffer.createObject();
+      JsonObject &state = root.createNestedObject("state");
+      JsonObject &reported = state.createNestedObject("reported");
+      INFO_LOG("Collecting board and sensor data...");
+      this->readPublicIP(reported);
+      this->readBoardData(reported);
+      this->readSensors(reported);
+      INFO_LOG("Setting actuators and reporting their state...");
+      this->handleActuators(reported);
+      delay(50);
+      if (this->shouldLog()) {
+        INFO_LOG("Sending log over MQTT...");
+        String data;
+        root.printTo(data);
+        this->mqttLog(data);
+        this->previousLogTime = millis();
+      }
+      INFO_LOG("Listening to update messages...");
+      this->mqttListen();
+      if (CoolFileSystem::hasSavedLogs()) {
+        INFO_LOG("Sending saved messages...");
+        this->sendSavedMessages();
       }
     }
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    JsonObject &state = root.createNestedObject("state");
-    JsonObject &reported = state.createNestedObject("reported");
-    INFO_LOG("Collecting board and sensor data...");
-    this->readPublicIP(reported);
-    this->readBoardData(reported);
-    this->readSensors(reported);
-    INFO_LOG("Setting actuators and reporting their state...");
-    this->handleActuators(reported);
-    delay(50);
-    if (this->shouldLog()) {
-      INFO_LOG("Sending log over MQTT...");
-      String data;
-      root.printTo(data);
-      this->mqttLog(data);
-      this->previousLogTime = millis();
-    }
-    INFO_LOG("Listening to update messages...");
-    this->mqttListen();
-    if (CoolFileSystem::hasSavedLogs()) {
-      INFO_LOG("Sending saved messages...");
-      this->sendSavedMessages();
-    }
-  }
-  SPIFFS.end();
-  if (this->sleepActive && (!this->shouldLog() || !rtcSynced)) {
+    SPIFFS.end();
+    if (this->sleepActive && (!this->shouldLog() || !rtcSynced)) {
     this->sleep(this->secondsToNextLog());
+    }
   }
 }
 
@@ -279,6 +282,7 @@ void CoolBoard::printConf() {
   INFO_VAR("  MQTT server:            =", this->mqttServer);
 }
 
+/*
 void CoolBoard::update(const char *answer) {
   INFO_LOG("Received new MQTT message");
   DynamicJsonBuffer jsonBuffer;
@@ -296,11 +300,13 @@ void CoolBoard::update(const char *answer) {
       if (String(COOL_FW_VERSION) == firmwareVersion) {
         INFO_LOG("You firmware version is up to date!");
         stateDesired["CoolBoard"]["firmwareUpdate"] = NULL;
-      } else {
+      } 
+      else {
         File otaUpdateConfig = SPIFFS.open("/otaUpdateConfig.json", "w");
         if (!otaUpdateConfig) {
           ERROR_LOG("Failed to create firmware update configuration file!");
-        } else {
+        } 
+        else {
           DEBUG_VAR("Firmware update scheduled, target version:",
                     firmwareVersion);
           firmwareJson.printTo(otaUpdateConfig);
@@ -315,7 +321,6 @@ void CoolBoard::update(const char *answer) {
     }
 
     this->coolBoardLed.strobe(BLUE, 0.5);
-
     if (this->manual) {
       INFO_LOG("Entering actuators manual mode");
       for (auto kv : stateDesired) {
@@ -343,7 +348,6 @@ void CoolBoard::update(const char *answer) {
         }
       }
     }
-
     CoolFileSystem::updateConfigFiles(stateDesired);
     JsonObject &newRoot = jsonBuffer.createObject();
     JsonObject &state = newRoot.createNestedObject("state");
@@ -354,7 +358,8 @@ void CoolBoard::update(const char *answer) {
     DEBUG_VAR("Preparing answer message: ", updateAnswer);
     this->mqttLog(updateAnswer);
     delay(10);
-  } else {
+  }
+  else {
     ERROR_LOG("Failed to parse update message");
   }
   if (SPIFFS.exists("/configSent.flag")) {
@@ -367,7 +372,7 @@ void CoolBoard::update(const char *answer) {
   SPIFFS.end();
   ESP.restart();
 }
-
+*/
 unsigned long CoolBoard::getLogInterval() { return (this->logInterval); }
 
 void CoolBoard::readSensors(JsonObject &reported) {
