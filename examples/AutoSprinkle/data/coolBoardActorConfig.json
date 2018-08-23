@@ -1,0 +1,21 @@
+{
+  "actif": true,
+  "inverted": false,
+  "temporal": false,
+  "low": [
+    50,
+    0,
+    0,
+    0
+  ],
+  "high": [
+    40,
+    0,
+    0,
+    0
+  ],
+  "type": [
+    "soilMoisture",
+    ""
+  ]
+}
