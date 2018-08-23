@@ -29,12 +29,23 @@
 #include "CoolConfig.h"
 #include "CoolLog.h"
 #include "libb64/cdecode.h"
+#include "OfflineMode.h"
 
 #define SEND_MSG_BATCH 10
 
+OfflineMood OfflineMode;
+//OfflineMode OfflineMode;
+
 void CoolBoard::begin() {
   this->powerCheck();
-  WiFi.mode(WIFI_STA);
+  if(OfflineMode.isOffline()){
+    WiFi.mode(WIFI_OFF);
+    DEBUG_LOG("WIFI DISABLED");
+  }
+  else{
+    WiFi.mode(WIFI_STA);
+    DEBUG_LOG("WIFI IN STATION MODE");
+  }
   if (!SPIFFS.begin()) {
     this->spiffsProblem();
   }
@@ -45,6 +56,7 @@ void CoolBoard::begin() {
   this->config();
   pinMode(ENABLE_I2C_PIN, OUTPUT);
   pinMode(BOOTSTRAP_PIN, INPUT);
+  pinMode(OFFLINESWITCH,INPUT);
   digitalWrite(ENABLE_I2C_PIN, HIGH);
   delay(100);
   this->coolBoardSensors.config();
@@ -85,6 +97,10 @@ void CoolBoard::loop() {
   if (!SPIFFS.begin()) {
     this->spiffsProblem();
   }
+  if(OfflineMode.isOffline()){
+    INFO_LOG("CoolBoard in Offline mode, does not connect");
+  }
+  else{
   if (!this->isConnected()) {
     this->coolPubSubClient->disconnect();
     INFO_LOG("Connecting...");
