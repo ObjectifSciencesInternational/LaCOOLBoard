@@ -87,7 +87,9 @@ void CoolBoard::begin() {
     this->externalSensors->begin();
     delay(100);
   }
-  this->mqttsConfig();
+  if(!OfflineMode.isOffline()){
+    this->mqttsConfig();
+  }
   delay(100);
   SPIFFS.end();
 }
@@ -97,6 +99,7 @@ void CoolBoard::loop() {
   if (!SPIFFS.begin()) {
     this->spiffsProblem();
   }
+  bool rtcSynced = true;
   if(OfflineMode.isOffline()){
     INFO_LOG("CoolBoard in Offline mode, does not connect");
   }
@@ -107,50 +110,53 @@ void CoolBoard::loop() {
       this->connect();
     }
     INFO_LOG("Synchronizing RTC...");
-    bool rtcSynced = CoolTime::getInstance().sync();
+    rtcSynced = CoolTime::getInstance().sync();
     if (!rtcSynced) {
       this->clockProblem();
     } 
-    else {
-      if (!SPIFFS.exists("/configSent.flag")) {
-        this->sendAllConfig();
-        File f;
-        if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
-        ERROR_LOG("Can't create file configSent.flag in SPIFFS");
-        } 
-        else {
-         f.close();
-        }
-      }
-      DynamicJsonBuffer jsonBuffer;
-      JsonObject &root = jsonBuffer.createObject();
-      JsonObject &state = root.createNestedObject("state");
-      JsonObject &reported = state.createNestedObject("reported");
-      INFO_LOG("Collecting board and sensor data...");
-      this->readPublicIP(reported);
-      this->readBoardData(reported);
-      this->readSensors(reported);
-      INFO_LOG("Setting actuators and reporting their state...");
-      this->handleActuators(reported);
-      delay(50);
-      if (this->shouldLog()) {
-        INFO_LOG("Sending log over MQTT...");
-        String data;
-        root.printTo(data);
-        this->mqttLog(data);
-        this->previousLogTime = millis();
-      }
-      INFO_LOG("Listening to update messages...");
-      this->mqttListen();
-      if (CoolFileSystem::hasSavedLogs()) {
-        INFO_LOG("Sending saved messages...");
-        this->sendSavedMessages();
-      }
+  }
+  if (!SPIFFS.exists("/configSent.flag")) {
+    this->sendAllConfig();
+    File f;
+    if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
+    ERROR_LOG("Can't create file configSent.flag in SPIFFS");
+  } 
+  else {
+    f.close();
+  }
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject &root = jsonBuffer.createObject();
+  JsonObject &state = root.createNestedObject("state");
+  JsonObject &reported = state.createNestedObject("reported");
+  INFO_LOG("Collecting board and sensor data...");
+  this->readPublicIP(reported);
+  this->readBoardData(reported);
+  this->readSensors(reported);
+  INFO_LOG("Setting actuators and reporting their state...");
+  this->handleActuators(reported);
+  delay(50);
+  if (this->shouldLog() ){
+    if(! OfflineMode.isOffline()) INFO_LOG("Sending log over MQTT...");
+    String data;
+    root.printTo(data);
+    INFO_LOG("Sending log over MQTT...");
+    if(!OfflineMode.isOffline()) this->mqttLog(data);
+    this->previousLogTime = millis();
+  }
+  if(!OfflineMode.isOffline()){
+    INFO_LOG("Listening to update messages...");
+    this->mqttListen();
+    if (CoolFileSystem::hasSavedLogs()) {
+      INFO_LOG("Sending saved messages...");
+      this->sendSavedMessages();
     }
-    SPIFFS.end();
-    if (this->sleepActive && (!this->shouldLog() || !rtcSynced)) {
+  }
+  SPIFFS.end();
+  //if (this->sleepActive/* && !this->shouldLog()*/ ) {
+
+    DEBUG_VAR("time before wake-up",this->secondsToNextLog());
     this->sleep(this->secondsToNextLog());
-    }
+    //}
   }
 }
 
@@ -282,7 +288,7 @@ void CoolBoard::printConf() {
   INFO_VAR("  MQTT server:            =", this->mqttServer);
 }
 
-/*
+
 void CoolBoard::update(const char *answer) {
   INFO_LOG("Received new MQTT message");
   DynamicJsonBuffer jsonBuffer;
@@ -372,7 +378,7 @@ void CoolBoard::update(const char *answer) {
   SPIFFS.end();
   ESP.restart();
 }
-*/
+
 unsigned long CoolBoard::getLogInterval() { return (this->logInterval); }
 
 void CoolBoard::readSensors(JsonObject &reported) {
