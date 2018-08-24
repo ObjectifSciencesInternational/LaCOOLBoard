@@ -4,6 +4,7 @@
 OfflineMood::OfflineMood(){
     offlineM=true;//a changer à "false" pour tester en vrai
     HWstate=false;
+    ActuateMode();
 }
 
 void OfflineMood::ActuateMode(){
@@ -18,6 +19,5 @@ void OfflineMood::ActuateMode(){
 }
 
 bool OfflineMood::isOffline(){
-    ActuateMode();
     return (offlineM);
 }
