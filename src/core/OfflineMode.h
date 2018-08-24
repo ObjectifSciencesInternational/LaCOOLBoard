@@ -1,4 +1,4 @@
-#define OFFLINESWITCH 9
+#define OFFLINESWITCH 4
 
 class OfflineMood {
     public:

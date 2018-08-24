@@ -8,11 +8,12 @@ OfflineMood::OfflineMood(){
 
 void OfflineMood::ActuateMode(){
     HWstate=digitalRead(OFFLINESWITCH);
+    DEBUG_VAR("pin 4 state :",HWstate);
     if(HWstate){
         offlineM=true;
     }
     else{
-        offlineM=/*false;*/true;
+        offlineM=false;
     }   
 }
 
