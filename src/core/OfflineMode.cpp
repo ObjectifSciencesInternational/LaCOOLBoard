@@ -12,7 +12,7 @@ void OfflineMood::ActuateMode(){
         offlineM=true;
     }
     else{
-        offlineM=false;
+        offlineM=/*false;*/true;
     }   
 }
 

@@ -116,13 +116,14 @@ void CoolBoard::loop() {
     } 
   }
   if (!SPIFFS.exists("/configSent.flag")) {
-    this->sendAllConfig();
+    if( OfflineMode.isOffline()) this->sendAllConfig();
     File f;
     if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
     ERROR_LOG("Can't create file configSent.flag in SPIFFS");
-  } 
-  else {
-    f.close();
+    } 
+    else {
+      f.close();
+    }
   }
   DynamicJsonBuffer jsonBuffer;
   JsonObject &root = jsonBuffer.createObject();
@@ -152,11 +153,9 @@ void CoolBoard::loop() {
     }
   }
   SPIFFS.end();
-  //if (this->sleepActive/* && !this->shouldLog()*/ ) {
-
+  if (this->sleepActive/* && !this->shouldLog()*/ ) {
     DEBUG_VAR("time before wake-up",this->secondsToNextLog());
     this->sleep(this->secondsToNextLog());
-    //}
   }
 }
 
