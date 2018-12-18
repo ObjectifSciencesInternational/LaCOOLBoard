@@ -118,6 +118,7 @@ private:
   DallasTemperature sensor;
   DeviceAddress dallasAddress;
 };
+//exemple One wire class sensor 
 
 template <>
 class ExternalSensor<Adafruit_TCS34725> : public BaseExternalSensor {

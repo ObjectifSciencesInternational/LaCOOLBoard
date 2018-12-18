@@ -38,6 +38,9 @@
 #define LINEARISATION_MOISTURE_B -0.13
 #define LINEARISATION_MOISTURE_C -4.0
 #define MOISTURE_SAMPLES 64
+#define TURBIDITY_SAMPLES 16
+#define LINEARISATION_TURBIDITY_A 875
+#define LINEARISATION_TURBIDITY_B 388
 
 class CoolBoardSensors {
 
@@ -59,6 +62,7 @@ public:
   float soilMoistureLinearisation(float rawMoistureValue);
   float readSoilMoisture();
   float readWallMoisture();
+  float readTurbidity();
   CoolSI114X lightSensor;
   BME280 envSensor;
 
@@ -76,8 +80,9 @@ private:
   } airDataActive;
 
   bool vbatActive = true;
-  bool soilMoistureActive = true;
+  bool soilMoistureActive = false;
   bool wallMoistureActive = false;
+  bool turbidityActive= true;
 };
 
 #endif

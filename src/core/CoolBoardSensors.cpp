@@ -131,6 +131,9 @@ void CoolBoardSensors::read(JsonObject &root) {
   if (this->wallMoistureActive) {
     root["wallMoisture"] = this->readWallMoisture();
   }
+  if (this->turbidityActive) {
+    root["turbidity"]= this-> readTurbidity();
+  }
   DEBUG_JSON("Builtin sensors data:", root);
 }
 
@@ -152,6 +155,7 @@ bool CoolBoardSensors::config() {
   config.set<bool>(json, "vbat", this->vbatActive);
   config.set<bool>(json, "soilMoisture", this->soilMoistureActive);
   config.set<bool>(json, "wallMoisture", this->wallMoistureActive);
+  config.set<bool>(json, "turbidity",this->turbidityActive);
   DEBUG_LOG("Builtin sensors configuration loaded");
   return (true);
 }
@@ -166,6 +170,7 @@ void CoolBoardSensors::printConf() {
   INFO_VAR("  Battery voltage      =", vbatActive);
   INFO_VAR("  Soil moisture        =", soilMoistureActive);
   INFO_VAR("  Wall moisture        =", wallMoistureActive);
+  INFO_VAR("  Turbidity            ="turbidityActive);
 }
 
 void CoolBoardSensors::setEnvSensorSettings(uint8_t commInterface,
@@ -195,6 +200,7 @@ float CoolBoardSensors::readVBat() {
   DEBUG_VAR("Battery voltage:", voltage);
   return (voltage);
 }
+
 float CoolBoardSensors::soilMoistureLinearisation(float rawMoistureValue) {
   float moistureValue =
       LINEARISATION_MOISTURE_A * rawMoistureValue * rawMoistureValue +
@@ -240,3 +246,20 @@ float CoolBoardSensors::readWallMoisture() {
   DEBUG_VAR("Raw wall moisture sensor value:", val);
   return (float(val));
 }
+
+float CoolBoardSensors::readTurbidity() {
+  float val = 0;
+  digitalWrite(ANALOG_MULTIPLEXER_PIN,LOW);
+  delay(500);
+  for (int i = 1; i <= TURBIDITY_SAMPLES; i++) {
+    delay(10);
+    val = val + analogRead(A0);
+  }
+  digitalWrite(MOISTURE_SENSOR_PIN, HIGH);
+  val = val / TURBIDITY_SAMPLES;
+  val = LINEARISATION_TURBIDITY_A * (3.3-val) *(3.3-val) + LINEARISATION_TURBIDITY_B*(3.3-val);
+  if(val< 0 ) val= 0; 
+  DEBUG_VAR("Turbidity sensor value NTU:", val);
+  return (val);
+}
+
