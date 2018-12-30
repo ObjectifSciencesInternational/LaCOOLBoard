@@ -11,5 +11,6 @@
   },
   "vbat": true,
   "soilMoisture": true,
-  "wallMoisture": false
+  "wallMoisture": false,
+  "turbidity": true
 }

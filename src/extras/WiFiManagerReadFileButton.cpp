@@ -14,6 +14,7 @@
 #include "WiFiManagerReadFileButton.h"
 #include "ArduinoJson.h"
 #include <ESP8266WebServer.h>
+#include "CoolFileSystem.h"
 
 
 WiFiManagerParameter::WiFiManagerParameter(const char *custom) {
@@ -135,7 +136,7 @@ void WiFiManager::setupConfigPortal() {
   server->on(String(F("/i")), std::bind(&WiFiManager::handleInfo, this));
   server->on(String(F("/r")), std::bind(&WiFiManager::handleEspReset, this));
   //server->on("/generate_204", std::bind(&WiFiManager::handle204, this));  //Android/Chrome OS captive portal check.
-  server->on("/sensorsData.csv", std::bind(&WiFiManager::handleFileRead, this,"/sensorsData.csv"));
+  server->on("/sensorsData.csv", std::bind(&WiFiManager::handleFileReadSensors, this,"/sensorsData.csv"));//change that #
   server->on(String(F("/fwlink")), std::bind(&WiFiManager::handleRoot, this));  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
   server->onNotFound (std::bind(&WiFiManager::handleNotFound, this));
   server->begin(); // Web server start
@@ -374,6 +375,7 @@ void WiFiManager::handleRoot() {
   server->send(200, "text/html", page);
 
 }
+//ici!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 /** Wifi config page handler */
 void WiFiManager::handleWifi(boolean scan) {
@@ -745,6 +747,34 @@ bool WiFiManager::handleFileRead(String path){
   return false;
 }
 
+bool WiFiManager::handleFileReadSensors(String path){
+  String tempMAC = WiFi.macAddress();
+  tempMAC.replace(":", "");
+  Serial.print ("MAC address : ");
+  Serial.println (tempMAC);
+  DEBUG_WM("handleFileRead: ");
+  //
+  int lastSavedLogNumber = CoolFileSystem::lastSavedLogNumber();
+  if(lastSavedLogNumber ! = 0 ){
+    int currentFileNumber=1;
+    
+    for( currentFileNumber = 1 ; currentFileNumber <= lastSavedLogNumber; currentFileNumber++){
+      path = currentFileNumber.toString() + ".json";
+      if( SPIFFS.exists(path))){
+        File file = SPIFFS.open(path, "r");
+        size_t sent = server->streamFile(file, "text/json");
+        Serial.println(server->streamFile(file,"text/json"));
+        file.close();
+      }
+    }
+    return true;
+  }
+  else{
+    handleNotFound();
+    return false;
+  }
+}
+//ici !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!
 
 void WiFiManager::handleNotFound() {
   if (captivePortal()) {
@@ -860,5 +890,6 @@ String WiFiManager::getContentType(String filename){
   else if(filename.endsWith(".zip")) return "application/x-zip";
   else if(filename.endsWith(".gz")) return "application/x-gzip";
   else if (filename.endsWith(".csv")) return "text/csv";
+  else if (filename.endsWith(".json")) return "text/json";
   return "text/plain";
 }
