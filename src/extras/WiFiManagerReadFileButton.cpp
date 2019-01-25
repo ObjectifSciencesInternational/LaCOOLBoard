@@ -17,6 +17,7 @@
 #include "CoolFileSystem.h"
 
 
+
 WiFiManagerParameter::WiFiManagerParameter(const char *custom) {
   _id = NULL;
   _placeholder = NULL;
@@ -136,7 +137,8 @@ void WiFiManager::setupConfigPortal() {
   server->on(String(F("/i")), std::bind(&WiFiManager::handleInfo, this));
   server->on(String(F("/r")), std::bind(&WiFiManager::handleEspReset, this));
   //server->on("/generate_204", std::bind(&WiFiManager::handle204, this));  //Android/Chrome OS captive portal check.
-  server->on("/sensorsData.csv", std::bind(&WiFiManager::handleFileReadSensors, this,"/sensorsData.csv"));//change that #
+  //server->on("/sensorsData.csv", std::bind(&WiFiManager::handleFileReadSensors, this,"/sensorsData.csv"));//change that #
+  server->on("/sensorsData", std::bind(&WiFiManager::handleFileList, this));//change that #
   server->on(String(F("/fwlink")), std::bind(&WiFiManager::handleRoot, this));  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
   server->onNotFound (std::bind(&WiFiManager::handleNotFound, this));
   server->begin(); // Web server start
@@ -646,17 +648,19 @@ void WiFiManager::handleEraseData() {
   page += FPSTR(HTTP_END);
   server->send(200, "text/html", page);
 
-  DEBUG_WM(F("Sent erase Data page"));
-  if(SPIFFS.exists("/sensorsData.csv"))
-  {
-    Serial.println("/sensorsData.csv EXISTS!");
-    while( SPIFFS.remove("/sensorsData.csv") == 0 )
+  int logNb=1;
+  String logPath= "/log/"+ String(logNb) + ".json";
+  while(SPIFFS.exists(logPath)){
+    while( SPIFFS.remove(logPath) == 0 )
     {
       delay(2);
     }
-    Serial.println(F("File erased!"));
+    Serial.println(F("File erased"));
+    logNb++;
+    logPath= "/log/"+String(logNb) + ".json";
   }
-  else Serial.println(F("sensorsData.csv does not exist!"));
+  DEBUG_WM(F("Sent erase Data page"));
+  
   
   delay(500);
   ESP.restart();
@@ -747,32 +751,34 @@ bool WiFiManager::handleFileRead(String path){
   return false;
 }
 
-bool WiFiManager::handleFileReadSensors(String path){
-  String tempMAC = WiFi.macAddress();
-  tempMAC.replace(":", "");
-  Serial.print ("MAC address : ");
-  Serial.println (tempMAC);
-  DEBUG_WM("handleFileRead: ");
-  //
-  int lastSavedLogNumber = CoolFileSystem::lastSavedLogNumber();
-  if(lastSavedLogNumber ! = 0 ){
-    int currentFileNumber=1;
-    
-    for( currentFileNumber = 1 ; currentFileNumber <= lastSavedLogNumber; currentFileNumber++){
-      path = currentFileNumber.toString() + ".json";
-      if( SPIFFS.exists(path))){
-        File file = SPIFFS.open(path, "r");
-        size_t sent = server->streamFile(file, "text/json");
-        Serial.println(server->streamFile(file,"text/json"));
-        file.close();
-      }
+void WiFiManager::handleFileList() {
+  DEBUG_WM("handleSensorFiles:");
+  String path = "/log/";
+  Dir dir = SPIFFS.openDir(path);
+  path = String();
+  String output = "[";
+  while (dir.next()) {
+    File entry = dir.openFile("r");
+    if (output != "[") {
+      output += ',';
     }
-    return true;
+    bool isDir = false;
+    
+    output += "{\"file\":\"";
+    output += String(entry.name()).substring(1);
+    output += "\"\n   {";  
+    output += FiledataSelection(entry);
+    output += "}\n";
+    entry.close();
   }
-  else{
-    handleNotFound();
-    return false;
-  }
+
+  output += "]";
+  server->send(200, "text/json", output);
+}
+
+String WiFiManager::FiledataSelection(File entry){
+  String sample= entry.readString() ;
+  return  sample ;
 }
 //ici !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!
 

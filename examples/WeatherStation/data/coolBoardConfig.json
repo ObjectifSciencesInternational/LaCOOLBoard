@@ -1,9 +1,9 @@
 {
-  "logInterval": 3600,
+  "logInterval": 10,
   "ireneActive": false,
   "jetpackActive": false,
   "externalSensorsActive": false,
-  "sleepActive": true,
+  "onlineMode": false,
   "manual": false,
   "mqttServer": "mqtts.lacoolboard.io"
 }

@@ -46,6 +46,7 @@
 #define LOW_POWER_SLEEP 300
 #define MQTT_RETRIES 5
 #define MAX_MQTT_RETRIES 15
+#define ACCESPOINTPIN 4
 
 class CoolBoard {
 
@@ -74,6 +75,7 @@ public:
   void messageSent();
   unsigned long secondsToNextLog();
   bool shouldLog();
+  bool shouldAccesPoint();
   void printMqttState(int state);
   void mqttConnect();
   bool mqttPublish(String data);
@@ -97,11 +99,14 @@ private:
   CoolBoardActuator coolBoardActuator;
   CoolPubSubClient *coolPubSubClient = new CoolPubSubClient;
   WiFiClientSecure *wifiClientSecure = new WiFiClientSecure;
+  bool actuateAccesPoint();
   bool ireneActive = false;
   bool jetpackActive = false;
   bool externalSensorsActive = false;
   bool sleepActive = true;
   bool manual = false;
+  bool isOnlineMode = false;
+  bool startAccessPoint = false;
   unsigned long logInterval = 3600;
   unsigned long previousLogTime = 0;
   String mqttId;

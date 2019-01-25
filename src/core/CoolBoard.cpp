@@ -29,23 +29,16 @@
 #include "CoolConfig.h"
 #include "CoolLog.h"
 #include "libb64/cdecode.h"
-#include "OfflineMode.h"
 
 #define SEND_MSG_BATCH 10
 
-OfflineMood OfflineMode;
-//OfflineMode OfflineMode;
-
 void CoolBoard::begin() {
   this->powerCheck();
-  if(OfflineMode.isOffline()){
-    WiFi.mode(WIFI_OFF);
-    DEBUG_LOG("WIFI DISABLED");
-  }
-  else{
-    WiFi.mode(WIFI_STA);
-    DEBUG_LOG("WIFI IN STATION MODE");
-  }
+  pinMode(ENABLE_I2C_PIN, OUTPUT);
+  pinMode(BOOTSTRAP_PIN, INPUT);
+  pinMode(ACCESPOINTPIN,INPUT);
+  digitalWrite(ENABLE_I2C_PIN, HIGH);
+  delay(100);
   if (!SPIFFS.begin()) {
     this->spiffsProblem();
   }
@@ -54,10 +47,14 @@ void CoolBoard::begin() {
   delay(10);
   this->coolBoardLed.write(YELLOW);
   this->config();
-  pinMode(ENABLE_I2C_PIN, OUTPUT);
-  pinMode(BOOTSTRAP_PIN, INPUT);
-  pinMode(OFFLINESWITCH,INPUT);
-  digitalWrite(ENABLE_I2C_PIN, HIGH);
+  if(this->isOnlineMode || this->shouldAccesPoint() ){
+    WiFi.mode(WIFI_STA);
+    DEBUG_LOG("WIFI IN STATION MODE");
+  }
+  else{
+    WiFi.mode(WIFI_OFF);
+    DEBUG_LOG("WIFI DISABLED");
+  }
   delay(100);
   this->coolBoardSensors.config();
   this->coolBoardSensors.begin();
@@ -87,7 +84,7 @@ void CoolBoard::begin() {
     this->externalSensors->begin();
     delay(100);
   }
-  if(!OfflineMode.isOffline()){
+  if(this->isOnlineMode){
     this->mqttsConfig();
   }
   delay(100);
@@ -100,7 +97,11 @@ void CoolBoard::loop() {
     this->spiffsProblem();
   }
   bool rtcSynced = true;
-  if(OfflineMode.isOffline()){
+  if(this->shouldAccesPoint()){
+    INFO_LOG("CoolBoard starting acces point");
+    this->coolWifi->startAccessPoint(this->coolBoardLed);
+  }
+  if(!this->isOnlineMode){
     INFO_LOG("CoolBoard in Offline mode, does not connect");
   }
   else{
@@ -113,10 +114,11 @@ void CoolBoard::loop() {
     rtcSynced = CoolTime::getInstance().sync();
     if (!rtcSynced) {
       this->clockProblem();
-    } 
+    }
   }
+
   if (!SPIFFS.exists("/configSent.flag")) {
-    if( OfflineMode.isOffline()) this->sendAllConfig();
+    if(!this->isOnlineMode) this->sendAllConfig();
     File f;
     if (!(f = SPIFFS.open("/configSent.flag", "w"))) {
     ERROR_LOG("Can't create file configSent.flag in SPIFFS");
@@ -137,14 +139,19 @@ void CoolBoard::loop() {
   this->handleActuators(reported);
   delay(50);
   if (this->shouldLog() ){
-    if(! OfflineMode.isOffline()) INFO_LOG("Sending log over MQTT...");
     String data;
     root.printTo(data);
-    INFO_LOG("Sending log over MQTT...");
-    if(!OfflineMode.isOffline()) this->mqttLog(data);
+    if(this->isOnlineMode){
+      INFO_LOG("Sending log over MQTT...");
+      this->mqttLog(data);
+    }
+    else{
+      INFO_LOG("Saving log in memory...");
+      CoolFileSystem::saveLogToFile(data.c_str());
+    }
     this->previousLogTime = millis();
   }
-  if(!OfflineMode.isOffline()){
+  if(this->isOnlineMode){
     INFO_LOG("Listening to update messages...");
     this->mqttListen();
     if (CoolFileSystem::hasSavedLogs()) {
@@ -238,6 +245,10 @@ bool CoolBoard::shouldLog() {
           this->previousLogTime == 0);
 }
 
+bool CoolBoard::shouldAccesPoint(){
+  return(this->startAccessPoint);
+}
+
 unsigned long CoolBoard::secondsToNextLog() {
   unsigned long seconds;
 
@@ -271,10 +282,13 @@ bool CoolBoard::config() {
   config.set<bool>(json, "externalSensorsActive", this->externalSensorsActive);
   config.set<bool>(json, "sleepActive", this->sleepActive);
   config.set<bool>(json, "manual", this->manual);
+  config.set<bool>(json, "onlineMode", this->isOnlineMode);
   config.set<String>(json, "mqttServer", this->mqttServer);
   INFO_LOG("Main configuration loaded");
+  this->startAccessPoint=!digitalRead(ACCESPOINTPIN);
   return (true);
 }
+
 
 void CoolBoard::printConf() {
   INFO_LOG("General configuration");

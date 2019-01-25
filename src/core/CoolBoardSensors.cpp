@@ -155,7 +155,7 @@ bool CoolBoardSensors::config() {
   config.set<bool>(json, "vbat", this->vbatActive);
   config.set<bool>(json, "soilMoisture", this->soilMoistureActive);
   config.set<bool>(json, "wallMoisture", this->wallMoistureActive);
-  config.set<bool>(json, "turbidity",this->turbidityActive);
+  config.set<bool>(json, "turbidity", this->turbidityActive);
   DEBUG_LOG("Builtin sensors configuration loaded");
   return (true);
 }
@@ -170,7 +170,7 @@ void CoolBoardSensors::printConf() {
   INFO_VAR("  Battery voltage      =", vbatActive);
   INFO_VAR("  Soil moisture        =", soilMoistureActive);
   INFO_VAR("  Wall moisture        =", wallMoistureActive);
-  INFO_VAR("  Turbidity            ="turbidityActive);
+  INFO_VAR("  Turbidity            =", turbidityActive);
 }
 
 void CoolBoardSensors::setEnvSensorSettings(uint8_t commInterface,
