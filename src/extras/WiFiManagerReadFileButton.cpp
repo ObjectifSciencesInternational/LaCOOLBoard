@@ -755,30 +755,27 @@ void WiFiManager::handleFileList() {
   DEBUG_WM("handleSensorFiles:");
   String path = "/log/";
   Dir dir = SPIFFS.openDir(path);
-  path = String();
-  String output = "[";
-  while (dir.next()) {
+  server->sendContent("{\n  \"log\":[\n ");
+  if(dir.next()){
     File entry = dir.openFile("r");
-    if (output != "[") {
-      output += ',';
+    if( entry ){
+      server->sendContent( entry.readString());
+      DEBUG_WM("File sent");
     }
-    bool isDir = false;
-    
-    output += "{\"file\":\"";
-    output += String(entry.name()).substring(1);
-    output += "\"\n   {";  
-    output += FiledataSelection(entry);
-    output += "}\n";
+    else DEBUG_WM("error treating data");
     entry.close();
   }
-
-  output += "]";
-  server->send(200, "text/json", output);
-}
-
-String WiFiManager::FiledataSelection(File entry){
-  String sample= entry.readString() ;
-  return  sample ;
+  while (dir.next()) {
+    File entry = dir.openFile("r");
+    if( entry ){
+      server->sendContent(",\n  ");
+      server->sendContent( entry.readString());
+      DEBUG_WM("File sent");
+    }
+    else DEBUG_WM("error treating data");
+    entry.close();
+  }
+  server->sendContent("\n ]\n}");
 }
 //ici !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!ici!!!!!!!!!!!!!!!!!!!!!!!
 
