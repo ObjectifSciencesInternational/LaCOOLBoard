@@ -50,9 +50,9 @@ void CoolTime::begin() {
   this->printStatus();
   if (this->rtc.hasStopped()) {
     WARN_LOG("RTC has stopped, need to resync");
+    settimeofday_cb(timeSet);
+    configTime(0, 0, "0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org");
   }
-  settimeofday_cb(timeSet);
-  configTime(0, 0, "0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org");
 }
 
 bool CoolTime::sync() {

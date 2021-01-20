@@ -45,7 +45,7 @@ void Irene3000::waitForButtonPress() {
 
 bool Irene3000::isButtonPressed() {
   int bValue = this->readButton();
-
+  DEBUG_VAR("IRN3000 Button value: ", bValue);
   if (bValue < 2000) {
     return true;
   }
@@ -103,7 +103,8 @@ bool Irene3000::config(bool overwrite) {
   }
   JsonObject &json = config.get();
 
-  config.set<bool>(json["waterTemp"], "active", this->waterTemp.active, overwrite);
+  config.set<bool>(json["waterTemp"], "active", this->waterTemp.active,
+                   overwrite);
   config.set<bool>(json["phProbe"], "active", this->phProbe.active, overwrite);
   config.set<bool>(json["adc2"], "active", this->adc2.active, overwrite);
   config.set<int>(json["adc2"], "gain", this->adc2.gain, overwrite);

@@ -102,6 +102,7 @@ void CoolBoard::loop() {
         f.close();
       }
     }
+
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     JsonObject &state = root.createNestedObject("state");

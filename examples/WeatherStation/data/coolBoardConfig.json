@@ -1,6 +1,6 @@
 {
   "logInterval": 3600,
-  "ireneActive": false,
+  "ireneActive": true,
   "jetpackActive": false,
   "externalSensorsActive": false,
   "sleepActive": false,
